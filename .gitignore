@@ -1,0 +1,11 @@
+# Entorno virtual
+.venv/
+
+# Cachés de Python y pytest
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Archivos del sistema
+.DS_Store
+*.swp
