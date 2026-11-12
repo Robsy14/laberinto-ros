@@ -1,0 +1,532 @@
+\documentclass[11pt,a4paper]{article}
+
+% ===================== PAQUETES =====================
+\usepackage[utf8]{inputenc}
+\usepackage[spanish]{babel}
+\usepackage[T1]{fontenc}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{fancyhdr}
+\usepackage{float}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{enumitem}
+\usepackage{booktabs}
+\usepackage{array}
+
+% ===================== CONFIG HYPERREF =====================
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    urlcolor=blue,
+    citecolor=blue,
+    pdftitle={Plataforma robótica de laberinto con control autónomo mediante ROS 2 -- Plan de proyecto},
+    pdfauthor={[Nombre integrante 1], [Nombre integrante 2]}
+}
+
+% ===================== CONFIG LISTINGS =====================
+\definecolor{codebg}{rgb}{0.95,0.95,0.95}
+\definecolor{codegreen}{rgb}{0,0.5,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{codebg},
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{codepurple},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{blue},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,
+    breaklines=true,
+    captionpos=b,
+    keepspaces=true,
+    numbers=left,
+    numbersep=5pt,
+    showspaces=false,
+    showstringspaces=false,
+    showtabs=false,
+    tabsize=4,
+    frame=single
+}
+\lstset{style=mystyle}
+
+% ===================== ENCABEZADOS =====================
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{Robótica -- Proyecto final}
+\fancyhead[R]{Plataforma de laberinto con ROS 2}
+\fancyfoot[C]{\thepage}
+
+% ======================================================
+\begin{document}
+
+% ===================== PORTADA =====================
+\begin{titlepage}
+    \centering
+    \vspace*{2cm}
+
+    {\Large \textbf{UNIVERSIDAD NACIONAL DE COLOMBIA}}\\[0.3cm]
+    {\large Sede Manizales}\\[2cm]
+
+    {\Huge \textbf{Plataforma robótica de laberinto con control autónomo mediante ROS 2 y visión artificial}}\\[0.5cm]
+    {\Large Plan de proyecto final}\\[0.3cm]
+    {\large Robótica}\\[2cm]
+
+    \rule{\linewidth}{0.5mm}\\[0.4cm]
+    {\large \textbf{Curso:} Robótica}\\
+    {\large \textbf{Código:} MAN-4101136-1-2026-02}\\[0.4cm]
+    \rule{\linewidth}{0.5mm}\\[1.5cm]
+
+    {\Large \textbf{Integrantes:}}\\[0.4cm]
+    {\large Lina Robsana Jamioy Tisoy}\\
+    {\large Tomás Rocha Castaño}\\[2cm]
+
+    {\large \textbf{Profesor:}}\\
+    {\large Jaime Enrique Arango Castro}\\[2cm]
+
+    \vfill
+    {\large \today}
+
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+% ===================== 1. INTRODUCCIÓN =====================
+\section{Introducción}
+Los sistemas de plataformas inclinables permiten controlar el movimiento de un objeto modificando la orientación de una superficie. Un ejemplo clásico es desplazar una esfera a través de un laberinto mediante inclinaciones controladas en dos ejes.
+
+Este proyecto propone desarrollar un sistema robótico autónomo que guíe una esfera desde una posición inicial hasta una meta dentro de un laberinto con múltiples rutas. El sistema integra cuatro procesos: percepción del entorno, identificación de la posición de la esfera, planificación de la trayectoria y control del movimiento. Estos procesos se coordinan mediante ROS 2, y el comportamiento físico se simula en Gazebo.
+
+El alcance principal es una implementación funcional en simulación. La construcción de una plataforma física no es un requisito de ejecución, aunque el documento describe una posible implementación futura.
+
+\subsection{Naturaleza de este documento}
+Este documento es un \textbf{plan de proyecto}. Define el problema, la arquitectura, la metodología y los criterios de aceptación antes de la implementación. El plan se comprobará durante la simulación y podrá modificarse si las pruebas muestran que conviene mejorar algún componente. Cada cambio se documentará junto con su motivo.
+
+\subsection{Pregunta del proyecto}
+¿Cómo desarrollar e integrar un sistema robótico autónomo mediante ROS 2, visión artificial y Gazebo que permita guiar una esfera a través de un laberinto de múltiples rutas utilizando una plataforma inclinable de dos grados de libertad?
+
+% ===================== 2. OBJETIVOS =====================
+\section{Objetivos}
+
+\subsection{Objetivo general}
+Desarrollar un sistema robótico autónomo en ROS 2 y Gazebo que permita guiar una esfera a través de un laberinto de múltiples rutas mediante la inclinación de una plataforma de dos grados de libertad, integrando visión artificial, planificación de trayectorias y control.
+
+\subsection{Objetivos específicos}
+\begin{enumerate}[label=\arabic*.]
+    \item Diseñar y modelar una plataforma inclinable de dos grados de libertad, un laberinto y una esfera, considerando sus propiedades físicas.
+    \item Implementar un sistema de percepción visual con una cámara virtual y OpenCV que detecte la esfera y estime su posición.
+    \item Desarrollar un algoritmo de planificación que, a partir del mapa del laberinto, la posición inicial y la salida, determine una ruta válida.
+    \item Implementar un controlador que, con la posición estimada, calcule las inclinaciones necesarias en los ejes X y Y.
+    \item Integrar los módulos mediante nodos y mecanismos de comunicación de ROS 2.
+    \item Validar el sistema en Gazebo, comparando la estimación visual con la posición real simulada y evaluando la capacidad de completar el recorrido.
+    \item Documentar una posible implementación física como trabajo futuro.
+\end{enumerate}
+
+% ===================== 3. MARCO TEÓRICO =====================
+\section{Marco teórico}
+Los conceptos del curso que sustentan el proyecto son los siguientes:
+
+\begin{itemize}
+    \item \textbf{Posición y orientación (capítulo 2):} la posición de la esfera se expresa en el sistema de coordenadas de la imagen y debe transformarse al marco de referencia del tablero. La orientación de la plataforma determina la relación entre ambos sistemas. TF2 gestiona estas transformaciones.
+    \item \textbf{Tiempo y movimiento (capítulo 3):} la esfera se modela con velocidades y aceleraciones. Las trayectorias se recorren en el tiempo y su duración es una métrica de desempeño.
+    \item \textbf{Cinemática (capítulo 4):} se relacionan los ángulos de las articulaciones X y Y con la inclinación resultante de la plataforma. No se modelan ruedas ni odometría, porque la esfera no es un robot móvil convencional.
+    \item \textbf{Navegación (capítulo 5):} el planificador A* calcula la ruta, y el controlador sigue la trayectoria mediante un punto de anticipación. Las paredes del laberinto representan obstáculos.
+    \item \textbf{SLAM (capítulo 6):} no aplica. El mapa del laberinto es conocido y la cámara es fija.
+\end{itemize}
+
+\subsection{Modelo físico de la esfera}
+Con la plataforma inclinada un ángulo $\theta$ en un eje, una esfera maciza que rueda sin deslizar tiene una aceleración a lo largo de ese eje dada por
+\begin{equation}
+    a = \frac{5}{7}\, g \sin\theta \approx \frac{5}{7}\, g\, \theta,
+\end{equation}
+donde $g = 9{,}81\ \text{m/s}^2$ y $\theta$ se expresa en radianes. Para $\theta = 5^\circ$ se obtiene $a \approx 0{,}61\ \text{m/s}^2$, y para $\theta = 8^\circ$, $a \approx 0{,}97\ \text{m/s}^2$. Con $5^\circ$, cruzar una celda de 40 mm desde el reposo toma aproximadamente $0{,}36$ s, es decir, unos 7 fotogramas a 20 FPS. Este valor sirve para dimensionar el controlador y la frecuencia de la cámara.
+
+% ===================== 4. ENTORNO DE TRABAJO =====================
+\section{Entorno de trabajo previsto}
+\begin{table}[H]
+    \centering
+    \begin{tabular}{@{}ll@{}}
+        \toprule
+        \textbf{Componente} & \textbf{Versión / detalle} \\
+        \midrule
+        Sistema operativo & Ubuntu 24.04 LTS \\
+        ROS 2 & Jazzy \\
+        Simulador & Gazebo Harmonic (\texttt{gz sim}) con \texttt{ros\_gz\_bridge} \\
+        Visión artificial & OpenCV (con módulo ArUco) \\
+        Lenguaje & Python 3 (nodos y primera simulación); C++ solo si el rendimiento lo exige \\
+        Visualización & RViz y Matplotlib \\
+        Control de versiones & Git \\
+        \bottomrule
+    \end{tabular}
+    \caption{Entorno de desarrollo previsto.}
+\end{table}
+
+\textbf{Nota:} Gazebo Classic no se utiliza. ROS 2 Jazzy se emplea con Gazebo Harmonic.
+
+% ===================== 5. DESCRIPCIÓN DEL PROBLEMA =====================
+\section{Descripción del problema}
+La plataforma tiene un laberinto de múltiples rutas, una esfera y una cámara fija externa. La cámara observa el movimiento de la esfera y, con OpenCV, se estima su posición dentro del tablero.
+
+Con el mapa del laberinto, la posición inicial y la salida conocidas, el algoritmo A* calcula una trayectoria completa. Después, el controlador usa la posición estimada para determinar las inclinaciones en los ejes X y Y que guían la esfera por la trayectoria.
+
+La posición real de la esfera, proporcionada por Gazebo, se usa \textbf{solamente} para validar la precisión de la percepción y evaluar el sistema. No entra en el controlador.
+
+% ===================== 6. DISEÑO DEL SISTEMA =====================
+\section{Diseño del sistema}
+
+\subsection{Diseño geométrico}
+\begin{table}[H]
+    \centering
+    \begin{tabular}{@{}lr@{}}
+        \toprule
+        \textbf{Parámetro} & \textbf{Valor} \\
+        \midrule
+        Plataforma exterior & $300 \times 300$ mm \\
+        Área interior del laberinto & $280 \times 280$ mm \\
+        Cuadrícula lógica & $7 \times 7$ celdas \\
+        Tamaño de cada celda & $40 \times 40$ mm \\
+        Espesor de paredes & 5 mm \\
+        Altura de paredes & 20 mm \\
+        Ancho libre de corredores & 35 mm (aprox.) \\
+        Diámetro de la esfera & 20 mm \\
+        Espesor de la superficie & 5 mm \\
+        Inclinación inicial de trabajo & $\pm 5^\circ$ por eje \\
+        Límite mecánico previsto & $\pm 8^\circ$ por eje \\
+        \bottomrule
+    \end{tabular}
+    \caption{Parámetros geométricos del diseño.}
+\end{table}
+
+Las paredes tienen 5 mm de espesor y se centran en los bordes de la cuadrícula. Por eso cada corredor libre mide $40 - 5 = 35$ mm, y la esfera de 20 mm cabe con holgura. Los parámetros de masa, fricción, restitución y velocidades se ajustarán en la simulación.
+
+\subsection{Mapa lógico del laberinto}
+El laberinto tiene corredores rectos, giros de 90°, al menos tres rutas válidas hacia la salida y ramificaciones sin salida. La matriz siguiente es la representación utilizada por el planificador A*:
+
+\begin{center}
+\begin{tabular}{c|ccccccc}
+    \toprule
+    & c0 & c1 & c2 & c3 & c4 & c5 & c6 \\
+    \midrule
+    r0 & \textbf{S} & 0 & 0 & 1 & 0 & 0 & 0 \\
+    r1 & 1 & 1 & 0 & 1 & 0 & 1 & 0 \\
+    r2 & 0 & 0 & 0 & 0 & 0 & 1 & 0 \\
+    r3 & 0 & 1 & 1 & 1 & 0 & 0 & 0 \\
+    r4 & 0 & 0 & 0 & 1 & 1 & 1 & 0 \\
+    r5 & 1 & 1 & 0 & 0 & 0 & 0 & 0 \\
+    r6 & 0 & 0 & 0 & 1 & 1 & 0 & \textbf{G} \\
+    \bottomrule
+\end{tabular}
+\end{center}
+
+\begin{itemize}
+    \item \textbf{S:} inicio, en la celda $(0,0)$.
+    \item \textbf{G:} salida, en la celda $(6,6)$.
+    \item \textbf{0:} espacio transitable. \textbf{1:} obstáculo.
+\end{itemize}
+
+Con esta matriz existen tres rutas desde S hasta G: una por la derecha, otra por el centro y otra por la izquierda. Además, hay una ramificación sin salida en $(6,0)$–$(6,2)$. Para la prueba de ausencia de ruta, se colocan paredes en $(5,6)$ y $(6,5)$, lo que aísla la meta.
+
+La matriz se implementará en Python como constante:
+\begin{lstlisting}[language=Python, caption={Mapa lógico en Python (\texttt{maze.py}).}]
+MAZE = [
+    [2, 0, 0, 1, 0, 0, 0],  # 2 = inicio (S)
+    [1, 1, 0, 1, 0, 1, 0],
+    [0, 0, 0, 0, 0, 1, 0],
+    [0, 1, 1, 1, 0, 0, 0],
+    [0, 0, 0, 1, 1, 1, 0],
+    [1, 1, 0, 0, 0, 0, 0],
+    [0, 0, 0, 1, 1, 0, 3],  # 3 = salida (G)
+]
+\end{lstlisting}
+
+Según las recomendaciones de la sección de riesgos, el mapa de \texttt{/maze/map} se publicará como \texttt{nav\_msgs/OccupancyGrid} para aprovechar un tipo de mensaje estándar.
+
+\subsection{Mecanismo de inclinación}
+La plataforma tiene dos grados de libertad organizados en cadena cinemática:
+\begin{center}
+    Base fija $\rightarrow$ articulación X $\rightarrow$ marco intermedio $\rightarrow$ articulación Y $\rightarrow$ plataforma superior.
+\end{center}
+Los dos ejes de rotación son perpendiculares. Cada articulación tiene un límite de $\pm 8^\circ$ en el modelo URDF. El control de las articulaciones se realizará mediante \texttt{ros2\_control} o el puente de Gazebo.
+
+\subsection{Sistema de percepción}
+La cámara es virtual, está fija externamente y no depende de la plataforma. Al cambiar la orientación de la plataforma, la perspectiva de la imagen también cambia. Para compensarlo, se utilizarán dos mecanismos combinados:
+\begin{enumerate}
+    \item \textbf{Marcadores ArUco en la plataforma.} OpenCV obtiene directamente la pose del tablero en cada cuadro. Esto reduce la dependencia de los ángulos comandados y permite compensar la perspectiva.
+    \item \textbf{Calibración geométrica de la cámara.} Se establece la relación entre los píxeles de la imagen y las coordenadas del tablero, expresadas en milímetros mediante TF2.
+\end{enumerate}
+La configuración inicial es de $640 \times 480$ píxeles y 20 FPS, sujeta a validación. La latencia de la cámara se medirá y se incluirá en el análisis. También se definirá el comportamiento cuando la esfera no se detecta, por ocultamiento o por salir del campo de visión.
+
+% ===================== 7. ARQUITECTURA =====================
+\section{Arquitectura del sistema}
+
+\subsection{Nodos}
+El sistema se organiza inicialmente en seis nodos. La arquitectura puede cambiar durante el desarrollo si las pruebas lo justifican.
+\begin{enumerate}
+    \item \texttt{camera\_node}: captura imágenes de la cámara virtual y las publica.
+    \item \texttt{ball\_detection\_node}: detecta la esfera con OpenCV y estima sus coordenadas en el marco del tablero.
+    \item \texttt{maze\_planner\_node}: calcula la trayectoria con A* y la publica. Puede solicitar una replanificación.
+    \item \texttt{maze\_controller\_node}: determina el siguiente punto de la trayectoria y calcula las inclinaciones de X y Y.
+    \item \texttt{platform\_actuator\_node}: convierte las inclinaciones en referencias para las articulaciones de Gazebo.
+    \item \texttt{simulation\_validation\_node}: compara la posición visual con la posición real de Gazebo, calcula el error y registra los resultados. No interviene en el control.
+\end{enumerate}
+
+\subsection{Tópicos}
+\begin{table}[H]
+    \centering
+    \begin{tabular}{@{}lll@{}}
+        \toprule
+        \textbf{Tópico} & \textbf{Contenido} & \textbf{Tipo de mensaje} \\
+        \midrule
+        \texttt{/camera/image\_raw} & Imagen de la cámara & \texttt{sensor\_msgs/Image} \\
+        \texttt{/ball\_position} & Posición estimada de la esfera & \texttt{geometry\_msgs/PointStamped} \\
+        \texttt{/maze/map} & Mapa lógico del laberinto & \texttt{nav\_msgs/OccupancyGrid} \\
+        \texttt{/maze/path} & Trayectoria planificada & \texttt{nav\_msgs/Path} \\
+        \texttt{/maze/tilt\_command} & Inclinaciones deseadas (rad) & \texttt{geometry\_msgs/Vector3} \\
+        \texttt{/platform/joint\_states} & Estado de las articulaciones & \texttt{sensor\_msgs/JointState} \\
+        \texttt{/ball/ground\_truth} & Posición real en Gazebo & \texttt{geometry\_msgs/PointStamped} \\
+        \bottomrule
+    \end{tabular}
+    \caption{Tópicos iniciales. Se verificarán durante la implementación.}
+\end{table}
+
+Todos los ángulos en los mensajes de ROS se expresan en radianes. Los grados se usan únicamente en la documentación.
+
+\subsection{Flujo de funcionamiento}
+\begin{enumerate}
+    \item \textbf{Inicialización:} se carga el laberinto en Gazebo, se fija la posición inicial de la esfera y se define la salida.
+    \item \textbf{Captura:} la cámara obtiene una imagen del tablero.
+    \item \textbf{Percepción:} OpenCV detecta la esfera y los marcadores, y transforma las coordenadas al marco del tablero.
+    \item \textbf{Planificación:} A* calcula la ruta completa desde la posición inicial hasta la salida.
+    \item \textbf{Control:} el controlador compara la posición estimada con el punto de anticipación y calcula las inclinaciones.
+    \item \textbf{Actuación:} Gazebo mueve la plataforma y la esfera.
+    \item \textbf{Realimentación:} la cámara actualiza la posición y el controlador corrige.
+    \item \textbf{Validación:} se compara la estimación visual con la posición real de Gazebo.
+    \item \textbf{Finalización:} el proceso termina al alcanzar la salida o al detectar una condición de fallo.
+\end{enumerate}
+
+Resumen del ciclo:
+\begin{lstlisting}[caption={Flujo general del sistema.}]
+Cámara virtual -> OpenCV -> Planificador A* -> Controlador -> Actuación en Gazebo -> Movimiento de la esfera
+                      ^                                                                        |
+                      |________________________ realimentación visual ________________________|
+\end{lstlisting}
+
+% ===================== 8. METODOLOGÍA =====================
+\section{Metodología de desarrollo y validación}
+El desarrollo es incremental y modular. Cada componente se prueba y valida de forma independiente antes de integrarse con los demás. La primera etapa se realiza en Python, sin ROS 2 ni Gazebo.
+
+\subsection{Etapa 0. Simulación previa en Python}
+\textbf{Objetivo:} validar en dos dimensiones la planificación, el control y el modelo físico simplificado, antes de montar el modelo en Gazebo. Así, los errores de lógica aparecen antes de mezclarse con los de la simulación 3D.
+
+\textbf{Alcance:} simulación 2D con posición exacta, sin cámara ni OpenCV. No incluye fricción ni deslizamiento.
+
+\textbf{Módulos:}
+\begin{table}[H]
+    \centering
+    \begin{tabular}{@{}ll@{}}
+        \toprule
+        \textbf{Archivo} & \textbf{Función} \\
+        \midrule
+        \texttt{maze.py} & Matriz del laberinto, conversión celda--milímetro y vecinos libres \\
+        \texttt{planner.py} & A* en cuadrícula 4-conexa con heurística de Manhattan \\
+        \texttt{physics.py} & Modelo de la esfera e integración numérica \\
+        \texttt{controller.py} & Controlador PD por eje con punto de anticipación \\
+        \texttt{simulate.py} & Bucle principal, registro de datos y gráficas \\
+        \texttt{tests/} & Pruebas automáticas de cada módulo \\
+        \bottomrule
+    \end{tabular}
+    \caption{Estructura de archivos de la simulación en Python.}
+\end{table}
+
+\textbf{Integración numérica:} método de Euler con paso de 1 ms.
+
+\textbf{Controlador:} para cada eje, el comando de inclinación es
+\begin{equation}
+    \theta = \operatorname{clamp}\left(K_p\, e + K_d\, \dot{e},\ -8^\circ,\ +8^\circ\right),
+\end{equation}
+donde $e$ es el error entre el punto de anticipación sobre la trayectoria y la posición estimada. La velocidad $\dot{e}$ se estima con un filtro para no amplificar el ruido de la posición. Las ganancias $K_p$ y $K_d$ se ajustarán en esta etapa.
+
+\textbf{Pruebas:}
+\begin{enumerate}
+    \item \textbf{Física:} con la plataforma horizontal, la esfera permanece quieta. Con $5^\circ$ en un eje, la aceleración medida coincide con $0{,}61$ m/s$^2$ con error menor al 1\,\%.
+    \item \textbf{A* sobre la matriz:} encuentra una ruta de S a G que no atraviesa paredes, y la ruta más corta es una de las tres rutas posibles.
+    \item \textbf{Ausencia de ruta:} si se bloquea G, A* informa que no hay solución, sin error ni bucle infinito.
+    \item \textbf{Recorrido completo:} la esfera llega de S a G siguiendo la trayectoria en las tres rutas posibles, sin salir de un corredor.
+    \item \textbf{Posiciones alternativas:} se repite la prueba desde al menos tres celdas de inicio distintas.
+    \item \textbf{Robustez:} con ruido gaussiano en la posición estimada (por ejemplo, 1 mm), el recorrido se completa.
+    \item \textbf{Registro:} cada ejecución guarda en CSV el tiempo, la posición real, la posición estimada, la ruta y los comandos de inclinación.
+\end{enumerate}
+
+\textbf{Salidas:} gráficas de la trayectoria real y planificada, gráfica de los ángulos comandados en el tiempo, animación GIF del recorrido y archivos CSV para la validación posterior.
+
+\textbf{Criterios de aceptación para pasar a Gazebo:}
+\begin{itemize}
+    \item Llegada a G en todas las pruebas de recorrido.
+    \item Error máximo respecto a la trayectoria menor a 5 mm en tramos rectos.
+    \item Tiempo de recorrido menor a un valor que se definirá tras las primeras pruebas (referencia inicial: 20 s).
+    \item Ninguna colisión con las paredes.
+\end{itemize}
+
+\subsection{Etapa 1. Modelado del entorno en Gazebo}
+\textbf{Descripción:} construir en Gazebo la plataforma, las articulaciones, el laberinto y la esfera, a partir de URDF/Xacro y archivos SDF.
+
+\textbf{Pruebas:}
+\begin{itemize}
+    \item El modelo se carga correctamente.
+    \item Las articulaciones permiten rotación en X y Y dentro de los límites de $\pm 8^\circ$.
+    \item Hay colisión entre la esfera y las paredes, y la esfera responde a la gravedad.
+    \item Los valores de masa, fricción y paso de simulación (1 ms como punto de partida) se ajustan para que el comportamiento coincida con la Etapa 0.
+\end{itemize}
+
+\subsection{Etapa 2. Sistema de percepción visual}
+\textbf{Descripción:} implementar la cámara virtual, la detección de la esfera con OpenCV y la detección de los marcadores ArUco.
+
+\textbf{Pruebas:}
+\begin{itemize}
+    \item La cámara publica imágenes correctamente en \texttt{/camera/image\_raw}.
+    \item OpenCV identifica la esfera y los marcadores.
+    \item Las coordenadas estimadas se comparan con las coordenadas reales de Gazebo, expresadas en el mismo marco mediante TF2.
+    \item Se evalúa el error de estimación en distintas posiciones del laberinto y se mide la latencia.
+\end{itemize}
+
+\subsection{Etapa 3. Planificación de trayectorias}
+\textbf{Descripción:} implementar A* sobre la cuadrícula $7 \times 7$ en Python y luego en el nodo \texttt{maze\_planner\_node}.
+
+\textbf{Pruebas:}
+\begin{itemize}
+    \item Encuentra una ruta entre inicio y salida.
+    \item La trayectoria no atraviesa paredes.
+    \item Funciona con diferentes posiciones iniciales y de destino.
+    \item Selecciona una ruta válida cuando existen caminos alternativos.
+    \item Informa correctamente cuando no existe ruta posible.
+\end{itemize}
+
+\subsection{Etapa 4. Sistema de control}
+\textbf{Descripción:} desarrollar el controlador PD con punto de anticipación, que convierte la posición y la trayectoria en inclinaciones.
+
+\textbf{Pruebas:}
+\begin{itemize}
+    \item Las inclinaciones corresponden al sentido del movimiento deseado.
+    \item Los dos ejes funcionan de forma independiente.
+    \item La respuesta de la esfera se evalúa ante distintas inclinaciones.
+    \item Se analizan oscilaciones, desviaciones y tiempos de respuesta.
+    \item Las esquinas de $90^\circ$ se prueban específicamente, porque el controlador debe cambiar de eje sin que la esfera quede pegada a una pared.
+\end{itemize}
+
+\subsection{Etapa 5. Integración del sistema}
+\textbf{Descripción:} conectar los nodos progresivamente mediante ROS 2.
+
+\textbf{Pruebas:}
+\begin{itemize}
+    \item La comunicación entre nodos funciona.
+    \item Los mensajes se publican y se reciben correctamente.
+    \item La información de percepción llega al planificador y al controlador.
+    \item Las órdenes de control producen el movimiento esperado en Gazebo.
+\end{itemize}
+
+\subsection{Etapa 6. Pruebas generales}
+\textbf{Descripción:} ejecutar recorridos completos con distintas condiciones iniciales.
+
+\textbf{Aspectos a evaluar:}
+\begin{itemize}
+    \item Capacidad de alcanzar la salida.
+    \item Precisión de la detección de la esfera.
+    \item Cumplimiento de la trayectoria planificada.
+    \item Tiempo empleado en el recorrido.
+    \item Comportamiento ante desviaciones y necesidad de replanificación.
+\end{itemize}
+
+% ===================== 9. CRITERIOS DE ACEPTACIÓN =====================
+\section{Criterios de aceptación del sistema}
+\begin{table}[H]
+    \centering
+    \begin{tabular}{@{}p{5.5cm}p{7cm}@{}}
+        \toprule
+        \textbf{Aspecto} & \textbf{Criterio propuesto} \\
+        \midrule
+        Llegada a la salida & Al menos 9 de cada 10 recorridos completos \\
+        Error de percepción & Por definir tras la Etapa 2 \\
+        Error de seguimiento & Menor a 5 mm en tramos rectos \\
+        Tiempo de recorrido & Por definir tras la Etapa 0 \\
+        Colisiones con paredes & Ninguna en las pruebas \\
+        Replanificación & Se activa ante desviación importante o bloqueo \\
+        \bottomrule
+    \end{tabular}
+    \caption{Criterios de aceptación propuestos. Los valores marcados como ``por definir'' se fijarán con los datos de las etapas tempranas.}
+\end{table}
+
+% ===================== 10. RIESGOS Y CAMBIOS =====================
+\section{Riesgos y criterios de modificación}
+\begin{table}[H]
+    \centering
+    \begin{tabular}{@{}p{4.5cm}p{4.5cm}p{4.5cm}@{}}
+        \toprule
+        \textbf{Riesgo} & \textbf{Efecto} & \textbf{Respuesta prevista} \\
+        \midrule
+        Perspectiva cambiante de la cámara & Error de estimación de posición & Marcadores ArUco y calibración geométrica \\
+        Ruido en la posición estimada & Oscilaciones del controlador & Filtro para la velocidad y saturación de comandos \\
+        Esfera pegada a la pared en curvas & Bloqueo del recorrido & Punto de anticipación y pruebas en esquinas \\
+        Diferencias entre Python y Gazebo & Ganancias que no funcionan en 3D & Ajuste de parámetros en la Etapa 1 \\
+        Latencia de la cámara & Respuesta tardía del control & Medición de latencia y reducción de la frecuencia de control \\
+        Esfera no detectada & Pérdida de la posición & Estado de búsqueda y replanificación \\
+        \bottomrule
+    \end{tabular}
+    \caption{Riesgos identificados y respuesta prevista.}
+\end{table}
+
+Si una etapa no cumple sus criterios, se revisa el diseño de ese módulo antes de avanzar. Los cambios al plan se registrarán en este documento, indicando el problema observado, la modificación y el resultado.
+
+% ===================== 11. TECNOLOGÍAS =====================
+\section{Herramientas y tecnologías}
+\begin{itemize}
+    \item \textbf{ROS 2 Jazzy:} comunicación y coordinación de los módulos. Se usan \texttt{TF2} para transformaciones, y \texttt{ros2\_control} o \texttt{ros\_gz\_bridge} para las articulaciones.
+    \item \textbf{Gazebo Harmonic:} simulación física del sistema.
+    \item \textbf{OpenCV:} detección de la esfera y de los marcadores ArUco.
+    \item \textbf{Python:} implementación de los nodos y de la simulación en la Etapa 0.
+    \item \textbf{RViz:} visualización de estados y transformaciones.
+    \item \textbf{URDF/Xacro y SDF:} descripción del modelo, sus articulaciones y el entorno.
+\end{itemize}
+
+Se considera Nav2 y SLAM como herramientas opcionales. El proyecto no depende de ellas, porque el mapa es conocido y la plataforma no es un robot móvil.
+
+% ===================== 12. ALCANCE =====================
+\section{Alcance}
+El resultado principal es una implementación funcional en simulación. Se documentan los componentes y las consideraciones para una futura construcción física, sin comprometer su fabricación como parte de los entregables principales.
+
+Como posible implementación futura se contemplan:
+\begin{itemize}
+    \item Un computador con ROS 2 para ejecutar los algoritmos.
+    \item Un ESP32-C6 como controlador de bajo nivel.
+    \item Dos servomotores para la inclinación en X y Y.
+    \item Una cámara física para observar el laberinto.
+    \item Una estructura impresa en 3D.
+    \item Una fuente de alimentación externa para los actuadores.
+\end{itemize}
+La comunicación entre el computador y el ESP32-C6 podría ser serial o inalámbrica, según el montaje físico.
+
+% ===================== 13. PENDIENTES =====================
+\section{Decisiones pendientes}
+\begin{itemize}
+    \item Confirmar con el profesor el alcance, en particular si se acepta el uso de marcadores ArUco.
+    \item Definir la masa y la fricción de la esfera tras la Etapa 0.
+    \item Definir el tiempo máximo de recorrido y el valor de tolerancia para considerar que se llegó a la salida.
+    \item Definir la frecuencia de la cámara y del control después de medir la latencia.
+    \item Asignar responsabilidades por integrante para cada etapa.
+    \item Elegir el repositorio de código y la estructura de carpetas.
+\end{itemize}
+
+% ===================== REFERENCIAS =====================
+\section*{Referencias}
+\begin{enumerate}
+    \item P. Corke, \emph{Robotics, Vision and Control}, Springer. Capítulos sobre localización, navegación y seguimiento de trayectorias.
+    \item Documentación oficial de ROS 2 Jazzy. \url{https://docs.ros.org}
+    \item Documentación oficial de Gazebo Harmonic. \url{https://gazebosim.org/docs}
+    \item Documentación oficial de OpenCV, módulo ArUco. \url{https://docs.opencv.org}
+\end{enumerate}
+
+\end{document}

@@ -1,0 +1,283 @@
+\documentclass[11pt,a4paper]{article}
+
+% ===================== PAQUETES =====================
+\usepackage[utf8]{inputenc}
+\usepackage[spanish]{babel}
+\usepackage[T1]{fontenc}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{fancyhdr}
+
+\graphicspath{{capturas/}}
+
+% ===================== CONFIG HYPERREF =====================
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    urlcolor=blue,
+    pdftitle={Etapa 0: simulación previa en Python -- Informe de presentación},
+    pdfauthor={Lina Robsana Jamioy Tisoy, Tomás Rocha Castaño}
+}
+
+% ===================== ENCABEZADOS =====================
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{Robótica -- Proyecto final}
+\fancyhead[R]{Etapa 0: simulación en Python}
+\fancyfoot[C]{\thepage}
+
+% ===================== COMANDO PARA FIGURAS =====================
+% Uso: \figura{nombre_del_archivo}{descripción}{etiqueta}
+\newcommand{\figura}[3]{%
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=0.85\linewidth]{#1}
+        \caption{#2}
+        \label{#3}
+    \end{figure}
+}
+
+% ======================================================
+\begin{document}
+
+% ===================== PORTADA =====================
+\begin{titlepage}
+    \centering
+    \vspace*{2cm}
+
+    {\Large \textbf{UNIVERSIDAD NACIONAL DE COLOMBIA}}\\[0.3cm]
+    {\large Sede Manizales}\\[2cm]
+
+    {\Huge \textbf{Plataforma robótica de laberinto con control autónomo mediante ROS 2 y visión artificial}}\\[0.5cm]
+    {\Large Informe de presentación: Etapa 0}\\[0.3cm]
+    {\large Simulación previa en Python}\\[2cm]
+
+    \rule{\linewidth}{0.5mm}\\[0.4cm]
+    {\large \textbf{Curso:} Robótica}\\
+    {\large \textbf{Código:} MAN-4101136-1-2026-02}\\[0.4cm]
+    \rule{\linewidth}{0.5mm}\\[1.5cm]
+
+    {\Large \textbf{Integrantes:}}\\[0.4cm]
+    {\large Lina Robsana Jamioy Tisoy}\\
+    {\large Tomás Rocha Castaño}\\[2cm]
+
+    {\large \textbf{Profesor:}}\\
+    {\large Jaime Enrique Arango Castro}\\[2cm]
+
+    \vfill
+    {\large \today}
+
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+% ===================== 1. INTRODUCCIÓN =====================
+\section{Introducción}
+El proyecto consiste en guiar una esfera a través de un laberinto de $7 \times 7$ celdas, inclinando una plataforma de dos grados de libertad. El sistema combina percepción visual, planificación de trayectorias y control, coordinados con ROS 2 y simulados en Gazebo.
+
+Antes de construir el modelo tridimensional, decidimos validar la lógica del sistema en una simulación bidimensional escrita en Python. Esta primera etapa permite detectar errores de planificación, de control o de modelado físico sin que se mezclen con problemas propios de Gazebo o de ROS 2. Cada módulo se probó de forma independiente, con pruebas automáticas y con gráficas que documentan su comportamiento.
+
+% ===================== 2. OBJETIVOS =====================
+\section{Objetivos de la Etapa 0}
+\begin{enumerate}
+    \item Verificar que la representación lógica del laberinto coincide con el diseño del plan.
+    \item Implementar y probar el planificador A* sobre esa representación.
+    \item Validar el modelo físico de la esfera rodando sobre la plataforma inclinada.
+    \item Diseñar y probar un controlador PD que siga la ruta sin salirse del corredor, y evaluar su robustez ante el ruido de medición.
+\end{enumerate}
+
+% ===================== 3. QUÉ SE VA A REALIZAR =====================
+\section{Qué se va a realizar}
+La etapa se divide en cinco módulos de Python, cada uno con sus pruebas automáticas y sus gráficas:
+
+\begin{itemize}
+    \item \textbf{\texttt{maze.py}:} define la matriz del laberinto, las celdas libres y las reglas de vecindad.
+    \item \textbf{\texttt{planner.py}:} calcula la ruta de inicio a salida con A* y compara dos criterios de desempate.
+    \item \textbf{\texttt{physics.py}:} modela la aceleración de la esfera según la inclinación de la plataforma.
+    \item \textbf{\texttt{controller.py}:} convierte la posición y la ruta en inclinaciones de los ejes X y Y, con un controlador PD.
+    \item \textbf{\texttt{simulate.py}:} ejecuta el recorrido completo, guarda los datos en CSV y genera una animación.
+\end{itemize}
+
+Además, se realiza una prueba de robustez: el controlador se ejecuta 30 veces por cada nivel de ruido de medición, para comprobar que sigue llegando a la meta.
+
+% ===================== 4. RESULTADOS ESPERADOS =====================
+\section{Resultados esperados}
+Antes de ejecutar las pruebas, se definieron los siguientes resultados esperados:
+
+\begin{itemize}
+    \item La matriz del laberinto tiene inicio en la celda $(0,0)$ y salida en la celda $(6,6)$.
+    \item A* encuentra una ruta de 12 pasos que no atraviesa paredes.
+    \item Con una inclinación de $5^\circ$, la aceleración de la esfera es de $0{,}61$ m/s$^2$, y tarda unos $0{,}36$ s en recorrer una celda de 40 mm desde el reposo.
+    \item El controlador llega a la meta con un sobreimpulso menor al $10\,\%$, sin colisiones con las paredes.
+    \item Con un ruido de medición de 1 mm, el recorrido se completa en todas las corridas.
+\end{itemize}
+
+% ===================== 5. DESARROLLO Y RESULTADOS =====================
+\section{Desarrollo y resultados}
+
+\subsection{Mapa lógico del laberinto}
+La primera verificación consiste en comprobar que el programa imprime la misma matriz definida en el plan. En la salida de texto, \texttt{S} marca el inicio, \texttt{G} la salida, \texttt{\#} las paredes y \texttt{.} las celdas libres.
+
+\figura{etapa0_01_maze_terminal}
+{Salida de \texttt{python src/maze.py}. La matriz coincide con la definida en el plan, con inicio en $(0,0)$ y salida en $(6,6)$.}
+{fig:maze_terminal}
+
+La figura~\ref{fig:maze_terminal} muestra la matriz tal como la imprime el programa. Esta es la verificación visual de que la representación lógica coincide con el diseño, y sirve como punto de partida para todos los módulos siguientes.
+
+\figura{etapa0_03_pytest_ok}
+{Resumen de las pruebas del módulo \texttt{maze}: seis pruebas pasan.}
+{fig:pytest_maze}
+
+La figura~\ref{fig:pytest_maze} muestra las seis pruebas del módulo \texttt{maze}: inicio y salida, celdas libres y paredes, límites del tablero y vecinos de $S$ y $G$. Durante el desarrollo, tres de estas pruebas fallaron por dos causas: la función devolvía un tipo de dato de NumPy en lugar de un booleano nativo, y una expectativa de la prueba no coincidía con la matriz. Ambas se corrigieron antes de continuar.
+
+\figura{etapa0_04_laberinto_grafica}
+{Representación gráfica del laberinto: inicio en verde, salida en rojo y paredes en gris oscuro.}
+{fig:maze_grafica}
+
+La figura~\ref{fig:maze_grafica} presenta el mismo laberinto de forma gráfica. Facilita la lectura de las rutas posibles y es la base de las figuras de planificación.
+
+\subsection{Planificación con A*}
+El planificador compara dos criterios de desempate cuando dos rutas tienen el mismo costo: \texttt{primera}, que toma el nodo insertado primero, y \texttt{menor\_h}, que toma el nodo más cercano a la meta.
+
+\figura{etapa0_05_planner_salida}
+{Salida de \texttt{python src/planner.py}: ambos criterios encuentran una ruta de 12 pasos y expanden 12 nodos.}
+{fig:planner_salida}
+
+La figura~\ref{fig:planner_salida} muestra que, en este laberinto, ambos criterios producen la misma ruta. Esto es esperable, porque la ruta más corta no tiene empates y el desempate no cambia el resultado.
+
+\figura{etapa0_06_pytest_planner}
+{Resumen de las pruebas de \texttt{maze} y \texttt{planner}: 14 pruebas pasan.}
+{fig:pytest_planner}
+
+La figura~\ref{fig:pytest_planner} muestra las catorce pruebas acumuladas hasta este punto. Verifican que la ruta empieza en $S$ y termina en $G$, que no atraviesa paredes, que se reporta correctamente cuando la salida está bloqueada, y que el criterio inválido genera un error.
+
+\figura{etapa0_07_planner_ruta}
+{Ruta calculada por A* sobre el laberinto, con 12 pasos.}
+{fig:planner_ruta}
+
+La figura~\ref{fig:planner_ruta} muestra la ruta encontrada. Avanza por la fila superior, baja por la columna 2, continúa por la fila 2 hasta la columna 4, desciende a la fila 3 y termina por la columna 6 hasta llegar a $G$.
+
+\figura{etapa0_08_planner_expandidos}
+{Nodos expandidos por cada criterio de desempate, en el laberinto y en un mapa abierto de $7 \times 7$.}
+{fig:planner_expandidos}
+
+La figura~\ref{fig:planner_expandidos} muestra la diferencia entre los criterios. En el laberinto ambos expanden 12 nodos. En el mapa abierto, \texttt{primera} expande 48 nodos y \texttt{menor\_h} solo 12. El desempate por cercanía a la meta reduce el trabajo del algoritmo.
+
+\figura{etapa0_09_planner_escala}
+{Nodos expandidos en mapas abiertos de $5 \times 5$ a $11 \times 11$, para los dos criterios.}
+{fig:planner_escala}
+
+La figura~\ref{fig:planner_escala} muestra cómo crece el trabajo del algoritmo al aumentar el tamaño del mapa. Con \texttt{primera}, el número de nodos expandidos pasa de 24 a 120. Con \texttt{menor\_h}, coincide con la longitud de la ruta, que va de 8 a 20 pasos. La ventaja de \texttt{menor\_h} se mantiene al crecer el mapa.
+
+\subsection{Modelo físico de la esfera}
+La esfera rueda sin deslizar sobre la plataforma. Con un ángulo $\theta$, su aceleración a lo largo del eje es $a = \frac{5}{7}\, g \sin\theta$. La simulación integra esta ecuación con un paso de 1 ms y se compara con la fórmula teórica.
+
+\figura{etapa0_10_physics_aceleracion}
+{Aceleración de la esfera según la inclinación: curva teórica y puntos obtenidos por integración numérica.}
+{fig:physics_aceleracion}
+
+La figura~\ref{fig:physics_aceleracion} muestra que los puntos simulados coinciden con la curva teórica. Esto confirma que la integración numérica reproduce el modelo. Con $5^\circ$ la aceleración es de $0{,}61$ m/s$^2$, y con $8^\circ$ es de $0{,}975$ m/s$^2$.
+
+\figura{etapa0_11_physics_caida}
+{Posición en $x$ de una esfera que parte del reposo, con inclinaciones de $5^\circ$ y $8^\circ$. Los triángulos marcan el tiempo teórico para recorrer 40 mm.}
+{fig:physics_caida}
+
+La figura~\ref{fig:physics_caida} muestra el tiempo que tarda la esfera en recorrer una celda de 40 mm. Los triángulos marcan los valores teóricos: $0{,}362$ s con $5^\circ$ y $0{,}286$ s con $8^\circ$. Las curvas cruzan la línea de 40 mm en esos instantes.
+
+\figura{etapa0_12_pytest_physics}
+{Resumen de las pruebas acumuladas hasta el módulo \texttt{physics}: 20 pruebas pasan.}
+{fig:pytest_physics}
+
+La figura~\ref{fig:pytest_physics} muestra las veinte pruebas acumuladas. Las de física verifican la aceleración con $5^\circ$, que la esfera no se mueve sin inclinación, el sentido del movimiento según el signo del ángulo, la independencia de los dos ejes y el tiempo de cruce de una celda.
+
+\subsection{Controlador PD}
+El controlador calcula la inclinación de cada eje como $\theta = K_p\, e - K_d\, v$, donde $e$ es el error de posición y $v$ la velocidad filtrada. Las ganancias se obtienen a partir de una frecuencia natural $\omega_n$ y un amortiguamiento $\zeta$:
+\begin{equation}
+    K_p = \frac{\omega_n^2}{k g}, \qquad K_d = \frac{2\zeta\omega_n}{k g}, \qquad k g = \frac{5}{7}\, g.
+\end{equation}
+Se eligió $\omega_n = 4$ rad/s y $\zeta = 0{,}7$, que dan $K_p \approx 2{,}28$ rad/m y $K_d \approx 0{,}80$ s/m.
+
+\figura{etapa0_13_controller_escalon}
+{Respuesta a un escalón de 40 mm para tres frecuencias naturales, con $\zeta = 0{,}7$.}
+{fig:controller_escalon}
+
+La figura~\ref{fig:controller_escalon} compara tres frecuencias naturales. Con $\omega_n = 2$ rad/s, la esfera tarda 1,98 s en llegar; con 4 rad/s, 1,03 s; y con 6 rad/s, 0,71 s. El sobreimpulso se mantiene cerca del $3{,}5\,\%$ en los tres casos, por debajo del $10\,\%$ exigido. Se eligió $\omega_n = 4$ rad/s porque es más rápido que 2 rad/s y evita la saturación que aparecería con 6 rad/s. Con un error de 40 mm, $\omega_n = 6$ rad/s pediría una inclinación de unos $11{,}8^\circ$, por encima del límite de $8^\circ$.
+
+\figura{etapa0_14_controller_ruta}
+{Trayectoria de la esfera sobre el laberinto, siguiendo los puntos de la ruta calculada por A*.}
+{fig:controller_ruta}
+
+La figura~\ref{fig:controller_ruta} muestra la trayectoria de la esfera siguiendo la ruta de A*. La esfera llega a $G$ sin colisiones en 7,72 s. Los puntos naranjas son los nodos de la ruta, y la trayectoria azul los sigue por el camino central del laberinto.
+
+\figura{etapa0_15_controller_comandos}
+{Arriba: inclinaciones comandadas en los ejes X y Y, con el límite de $\pm 8^\circ$ marcado. Abajo: error de seguimiento en cada eje.}
+{fig:controller_comandos}
+
+La figura~\ref{fig:controller_comandos} permite comprobar dos condiciones. Primero, las inclinaciones se mantienen dentro de $\pm 8^\circ$, así que el controlador no satura. Segundo, el error de seguimiento tiende a cero al final del recorrido, lo que indica que la esfera se estabiliza en la meta.
+
+\figura{etapa0_16_pytest_controller}
+{Resumen de las pruebas acumuladas hasta el controlador: 26 pruebas pasan.}
+{fig:pytest_controller}
+
+La figura~\ref{fig:pytest_controller} muestra las veintiséis pruebas acumuladas hasta este punto. Incluyen la fórmula de las ganancias, la saturación a $8^\circ$, la detección de colisiones con paredes y con el borde del tablero, la respuesta al escalón y el recorrido completo del laberinto sin colisiones.
+
+\subsection{Recorrido completo}
+El módulo \texttt{simulate.py} une el planificador y el controlador en un recorrido completo de S a G. El resultado se guarda en \texttt{datos/etapa0\_recorrido\_nominal.csv}, con el tiempo, la posición, las inclinaciones y el error en cada paso de 1 ms. Además, genera una animación de la esfera en el laberinto.
+
+\figura{etapa0_17_recorrido}
+{Cuadro final de la animación del recorrido completo de S a G, con la esfera sobre la trayectoria y el tiempo transcurrido.}
+{fig:recorrido}
+
+La figura~\ref{fig:recorrido} muestra el último cuadro de la animación. La esfera llega a la salida sin colisiones y el registro completo queda guardado en el archivo CSV para la validación posterior.
+
+\subsection{Robustez ante ruido}
+La prueba de robustez simula la medición de la posición con un ruido gaussiano de desviación $\sigma$. Por cada nivel de ruido se ejecutan 30 corridas con semillas distintas.
+
+Durante la primera ejecución de esta prueba, la corrida número 22 con $\sigma = 5$ mm chocó con una pared a los 2,34 s. La causa probable era el cambio de punto de la ruta: con una tolerancia de 15 mm, la esfera empezaba a girar antes de llegar al centro de la celda, y con su inercia podía invadir una pared. La tolerancia se redujo a 5 mm, y en la nueva ejecución ninguna de las 30 corridas chocó. El costo fue un recorrido más lento: el tiempo nominal pasó de 6,26 s a 7,72 s.
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{@{}rccc@{}}
+        \toprule
+        \textbf{Ruido $\sigma$ [mm]} & \textbf{Éxito} & \textbf{Tiempo medio [s]} & \textbf{Desviación [s]} \\
+        \midrule
+        0   & 100 \% & 7{,}72 & 0{,}00 \\
+        0{,}5 & 100 \% & 7{,}53 & 0{,}02 \\
+        1   & 100 \% & 7{,}30 & 0{,}04 \\
+        2   & 100 \% & 6{,}90 & 0{,}15 \\
+        5   & 100 \% & 6{,}30 & 0{,}33 \\
+        \bottomrule
+    \end{tabular}
+    \caption{Resultados de robustez con 30 corridas por nivel de ruido.}
+    \label{tab:robustez}
+\end{table}
+
+La tabla~\ref{tab:robustez} resume los resultados. Con ruido de hasta 5 mm, el controlador llega a la meta en todas las corridas. Sin embargo, el tiempo medio disminuye al aumentar el ruido. La causa es que el cambio de punto se decide con la posición medida: con ruido, la esfera a veces cambia de punto antes de llegar al centro de la celda y recorta la esquina. Este efecto acorta el tiempo, pero no provoca colisiones en las pruebas realizadas.
+
+\figura{etapa0_18_robustez}
+{Éxito y tiempo de recorrido según el nivel de ruido de medición, con 30 corridas por nivel.}
+{fig:robustez}
+
+La figura~\ref{fig:robustez} presenta los mismos resultados en forma gráfica. La barra de éxito se mantiene en el $100\,\%$ en todos los niveles, y la curva de tiempo muestra la reducción descrita arriba. Como la prueba usa 30 corridas por nivel, los resultados deben leerse como una evidencia inicial y no como una estadística definitiva.
+
+\figura{etapa0_19_pytest_robustez}
+{Resumen de las pruebas acumuladas hasta la prueba de robustez: 27 pruebas pasan.}
+{fig:pytest_robustez}
+
+La figura~\ref{fig:pytest_robustez} muestra las veintisiete pruebas acumuladas. La última verifica que, con ruido de 1 mm, la esfera completa el recorrido sin colisiones.
+
+% ===================== 6. CONCLUSIONES =====================
+\section{Conclusiones}
+La Etapa 0 cumple los resultados esperados. La matriz del laberinto, el planificador, el modelo físico y el controlador superan sus pruebas automáticas, y el recorrido completo de S a G se realiza sin colisiones. El controlador mantiene el éxito del $100\,\%$ hasta 5 mm de ruido de medición en 30 corridas por nivel.
+
+Quedan dos observaciones para el análisis posterior. La primera es que la tolerancia de cambio de punto influye directamente en las colisiones y en el tiempo de recorrido. La segunda es que el tiempo medio disminuye con el ruido, lo que indica que el controlador es sensible a la forma en que se decide cambiar de punto.
+
+\subsection{Siguiente etapa}
+La Etapa 1 construye el modelo de la plataforma, el laberinto y la esfera en Gazebo. Los parámetros de masa, fricción y paso de simulación se ajustarán para que el comportamiento coincida con los resultados de esta etapa.
+
+\end{document}
