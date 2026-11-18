@@ -82,28 +82,33 @@ El proyecto consiste en guiar una esfera a través de un laberinto de $7 \times 
 
 Antes de construir el modelo tridimensional, decidimos validar la lógica del sistema en una simulación bidimensional escrita en Python. Esta primera etapa permite detectar errores de planificación, de control o de modelado físico sin que se mezclen con problemas propios de Gazebo o de ROS 2. Cada módulo se probó de forma independiente, con pruebas automáticas y con gráficas que documentan su comportamiento.
 
+Además, el profesor recomendó comparar el planificador A* con Dijkstra antes de elegir el que usaría el proyecto. Esa comparación se presenta en la sección~\ref{sec:comparacion}.
+
 % ===================== 2. OBJETIVOS =====================
 \section{Objetivos de la Etapa 0}
 \begin{enumerate}
     \item Verificar que la representación lógica del laberinto coincide con el diseño del plan.
     \item Implementar y probar el planificador A* sobre esa representación.
+    \item Comparar A* con Dijkstra en mapas de distinto tamaño y complejidad, y elegir el planificador del proyecto.
     \item Validar el modelo físico de la esfera rodando sobre la plataforma inclinada.
     \item Diseñar y probar un controlador PD que siga la ruta sin salirse del corredor, y evaluar su robustez ante el ruido de medición.
 \end{enumerate}
 
 % ===================== 3. QUÉ SE VA A REALIZAR =====================
 \section{Qué se va a realizar}
-La etapa se divide en cinco módulos de Python, cada uno con sus pruebas automáticas y sus gráficas:
+La etapa se divide en varios módulos de Python, cada uno con sus pruebas automáticas y sus gráficas:
 
 \begin{itemize}
     \item \textbf{\texttt{maze.py}:} define la matriz del laberinto, las celdas libres y las reglas de vecindad.
     \item \textbf{\texttt{planner.py}:} calcula la ruta de inicio a salida con A* y compara dos criterios de desempate.
+    \item \textbf{\texttt{dijkstra.py}:} implementa Dijkstra sobre la misma cuadrícula, como referencia para la comparación.
+    \item \textbf{\texttt{generador\_laberintos.py}:} crea laberintos de distintos tamaños, con caminos alternativos.
     \item \textbf{\texttt{physics.py}:} modela la aceleración de la esfera según la inclinación de la plataforma.
     \item \textbf{\texttt{controller.py}:} convierte la posición y la ruta en inclinaciones de los ejes X y Y, con un controlador PD.
     \item \textbf{\texttt{simulate.py}:} ejecuta el recorrido completo, guarda los datos en CSV y genera una animación.
 \end{itemize}
 
-Además, se realiza una prueba de robustez: el controlador se ejecuta 30 veces por cada nivel de ruido de medición, para comprobar que sigue llegando a la meta.
+Además, se realizan tres comprobaciones adicionales: una prueba de robustez, en la que el controlador se ejecuta 30 veces por cada nivel de ruido de medición; una comparación entre A* y Dijkstra, en la que se miden rutas, nodos expandidos y tiempos; y una animación de la búsqueda de ambos algoritmos sobre el mismo laberinto.
 
 % ===================== 4. RESULTADOS ESPERADOS =====================
 \section{Resultados esperados}
@@ -112,8 +117,9 @@ Antes de ejecutar las pruebas, se definieron los siguientes resultados esperados
 \begin{itemize}
     \item La matriz del laberinto tiene inicio en la celda $(0,0)$ y salida en la celda $(6,6)$.
     \item A* encuentra una ruta de 12 pasos que no atraviesa paredes.
+    \item A* y Dijkstra encuentran rutas de igual longitud, y A* expande menos nodos que Dijkstra.
     \item Con una inclinación de $5^\circ$, la aceleración de la esfera es de $0{,}61$ m/s$^2$, y tarda unos $0{,}36$ s en recorrer una celda de 40 mm desde el reposo.
-    \item El controlador llega a la meta con un sobreimpulso menor al $10\,\%$, sin colisiones con las paredes.
+    \item El controlador llega a la meta con un sobreimpulso menor al 10\,\%, sin colisiones con las paredes.
     \item Con un ruido de medición de 1 mm, el recorrido se completa en todas las corridas.
 \end{itemize}
 
@@ -206,7 +212,7 @@ Se eligió $\omega_n = 4$ rad/s y $\zeta = 0{,}7$, que dan $K_p \approx 2{,}28$ 
 {Respuesta a un escalón de 40 mm para tres frecuencias naturales, con $\zeta = 0{,}7$.}
 {fig:controller_escalon}
 
-La figura~\ref{fig:controller_escalon} compara tres frecuencias naturales. Con $\omega_n = 2$ rad/s, la esfera tarda 1,98 s en llegar; con 4 rad/s, 1,03 s; y con 6 rad/s, 0,71 s. El sobreimpulso se mantiene cerca del $3{,}5\,\%$ en los tres casos, por debajo del $10\,\%$ exigido. Se eligió $\omega_n = 4$ rad/s porque es más rápido que 2 rad/s y evita la saturación que aparecería con 6 rad/s. Con un error de 40 mm, $\omega_n = 6$ rad/s pediría una inclinación de unos $11{,}8^\circ$, por encima del límite de $8^\circ$.
+La figura~\ref{fig:controller_escalon} compara tres frecuencias naturales. Con $\omega_n = 2$ rad/s, la esfera tarda 1,98 s en llegar; con 4 rad/s, 1,03 s; y con 6 rad/s, 0,71 s. El sobreimpulso se mantiene cerca del 3{,}5\,\% en los tres casos, por debajo del 10\,\% exigido. Se eligió $\omega_n = 4$ rad/s porque es más rápido que 2 rad/s y evita la saturación que aparecería con 6 rad/s. Con un error de 40 mm, $\omega_n = 6$ rad/s pediría una inclinación de unos $11{,}8^\circ$, por encima del límite de $8^\circ$.
 
 \figura{etapa0_14_controller_ruta}
 {Trayectoria de la esfera sobre el laberinto, siguiendo los puntos de la ruta calculada por A*.}
@@ -263,7 +269,7 @@ La tabla~\ref{tab:robustez} resume los resultados. Con ruido de hasta 5 mm, el c
 {Éxito y tiempo de recorrido según el nivel de ruido de medición, con 30 corridas por nivel.}
 {fig:robustez}
 
-La figura~\ref{fig:robustez} presenta los mismos resultados en forma gráfica. La barra de éxito se mantiene en el $100\,\%$ en todos los niveles, y la curva de tiempo muestra la reducción descrita arriba. Como la prueba usa 30 corridas por nivel, los resultados deben leerse como una evidencia inicial y no como una estadística definitiva.
+La figura~\ref{fig:robustez} presenta los mismos resultados en forma gráfica. La barra de éxito se mantiene en el 100\,\% en todos los niveles, y la curva de tiempo muestra la reducción descrita arriba. Como la prueba usa 30 corridas por nivel, los resultados deben leerse como una evidencia inicial y no como una estadística definitiva.
 
 \figura{etapa0_19_pytest_robustez}
 {Resumen de las pruebas acumuladas hasta la prueba de robustez: 27 pruebas pasan.}
@@ -271,9 +277,98 @@ La figura~\ref{fig:robustez} presenta los mismos resultados en forma gráfica. L
 
 La figura~\ref{fig:pytest_robustez} muestra las veintisiete pruebas acumuladas. La última verifica que, con ruido de 1 mm, la esfera completa el recorrido sin colisiones.
 
+% ===================== 5.6 COMPARACIÓN DE PLANIFICADORES =====================
+\subsection{Comparación de planificadores: A* y Dijkstra}
+\label{sec:comparacion}
+
+\subsubsection*{Qué hace cada algoritmo}
+Dijkstra explora el laberinto como una onda que se expande desde el inicio: revisa primero las celdas a un paso, luego las que están a dos pasos, y así sucesivamente. No sabe dónde está la salida, así que explora en todas las direcciones hasta llegar a ella. Cuando la encuentra, la ruta es la más corta posible, pero el trabajo realizado puede ser grande, porque incluye muchas celdas que no conducen a la meta.
+
+A* usa la misma idea y añade una estimación de la distancia que falta hasta la salida. En una cuadrícula, esta estimación es la distancia de Manhattan: el número de pasos horizontales y verticales hasta la meta, sin considerar las paredes. Como esa estimación nunca supera la distancia real, A* sigue encontrando la ruta más corta, y además prioriza las celdas que avanzan hacia la salida. Por eso necesita revisar menos celdas.
+
+En este proyecto, la salida es un punto conocido de antemano, así que A* puede usar esa información sin costo adicional.
+
+\subsubsection*{Metodología}
+Ambos algoritmos usan la misma matriz, los mismos vecinos y la misma forma de contar los nodos expandidos, que son las celdas procesadas antes de llegar a la meta. Así la comparación es justa.
+
+Se midieron tres métricas. La longitud de la ruta confirma que ambos son óptimos. Los nodos expandidos describen el trabajo de cada algoritmo y no dependen de la computadora. El tiempo de cálculo es el mínimo de tres repeticiones.
+
+Se usaron cuatro conjuntos de mapas:
+\begin{itemize}
+    \item El laberinto del proyecto de $7 \times 7$ celdas.
+    \item Dos mapas abiertos, sin paredes, de $7 \times 7$ y $11 \times 11$.
+    \item 30 mapas aleatorios de $15 \times 15$, con 30\,\% de paredes. Solo se usaron los mapas que tienen solución.
+    \item 20 laberintos generados por tamaño, de $15 \times 15$ y $31 \times 31$ celdas. Se crearon como laberintos perfectos, con un solo camino entre dos celdas, y después se abrieron 10\,\% de las paredes internas para crear caminos alternativos.
+\end{itemize}
+
+\subsubsection*{Resultados}
+La tabla~\ref{tab:comparacion} resume los resultados de los cuatro conjuntos de mapas.
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{lrrrr}
+        \toprule
+        \textbf{Conjunto de mapas} & \textbf{Pasos} & \textbf{Expandidos A*} & \textbf{Expandidos Dijkstra} & \textbf{Tiempo A* / Dijkstra [ms]} \\
+        \midrule
+        Laberinto del proyecto $7 \times 7$ & 12 & 12 & 27 & 0{,}045 / 0{,}085 \\
+        Mapa abierto $7 \times 7$ & 12 & 12 & 48 & 0{,}046 / 0{,}158 \\
+        Mapa abierto $11 \times 11$ & 20 & 20 & 120 & 0{,}089 / 0{,}406 \\
+        Aleatorios $15 \times 15$ (30 mapas) & -- & 47,2 & 142,4 & 0{,}187 / 0{,}487 \\
+        Laberintos $15 \times 15$ (20 mapas) & 37,4 & 47,8 & 70,3 & 0{,}144 / 0{,}201 \\
+        Laberintos $31 \times 31$ (20 mapas) & 81,0 & 250,4 & 404,6 & 0{,}787 / 1{,}170 \\
+        \bottomrule
+    \end{tabular}
+    \caption{Comparación entre A* y Dijkstra. Los valores de pasos y expandidos son promedios; la longitud de la ruta fue igual en todos los casos.}
+    \label{tab:comparacion}
+\end{table}
+
+En los seis conjuntos, ambos algoritmos encontraron rutas de igual longitud, así que los dos son óptimos en este problema. La diferencia está en el trabajo que realizan.
+
+\figura{etapa0_20_comparacion_expandidos}
+{Nodos expandidos de A* y Dijkstra en el laberinto del proyecto, en dos mapas abiertos y en el promedio de 30 mapas aleatorios de $15 \times 15$. Las barras de error indican la desviación estándar.}
+{fig:comp_expandidos}
+
+La figura~\ref{fig:comp_expandidos} muestra la diferencia más clara. En el laberinto del proyecto, A* expande 12 nodos y Dijkstra 27. En el mapa abierto de $7 \times 7$, la diferencia es de 12 contra 48. En los 30 mapas aleatorios, A* expande en promedio 47 nodos y Dijkstra 142, y A* expande menos nodos en todos ellos.
+
+\figura{etapa0_21_comparacion_tiempo}
+{Tiempo de cálculo de A* y Dijkstra en los mismos casos de la figura anterior.}
+{fig:comp_tiempo}
+
+La figura~\ref{fig:comp_tiempo} sigue el mismo patrón. En el laberinto del proyecto, A* tarda 0,045 ms y Dijkstra 0,085 ms. Estos tiempos son muy pequeños frente al periodo de control de 50 ms de la cámara a 20 FPS, así que la diferencia no afecta el funcionamiento del sistema. Por eso el número de nodos expandidos es la métrica principal de la comparación.
+
+Los laberintos generados con bucles muestran la misma tendencia, con una ventaja que se mantiene al aumentar el tamaño:
+
+\figura{etapa0_23_complejidad}
+{Nodos expandidos y tiempo de cálculo de A* y Dijkstra en 20 laberintos con bucles, para cada tamaño.}
+{fig:comp_complejidad}
+
+La figura~\ref{fig:comp_complejidad} muestra que, en los laberintos de $15 \times 15$, Dijkstra expande en promedio 70 nodos y A* 48. En los de $31 \times 31$, Dijkstra expande 405 y A* 250. Es decir, Dijkstra expande 1,5 veces más nodos en el tamaño menor y 1,6 veces más en el mayor. En tiempo, A* es unas 1,4 veces más rápido en $15 \times 15$ y 1,5 veces en $31 \times 31$. En los 40 laberintos, A* expandió menos nodos que Dijkstra en todos los casos.
+
+\subsubsection*{Visualización de la búsqueda}
+Para ver cómo avanza cada algoritmo, se animó la búsqueda sobre el mismo laberinto de $31 \times 31$ de la figura~\ref{fig:ejemplo_laberinto}. La figura~\ref{fig:busqueda} muestra el resultado final: los nodos expandidos en naranja y la ruta encontrada en azul.
+
+\figura{etapa0_24_ejemplo_laberinto}
+{Ejemplo de laberinto generado de $31 \times 31$ celdas con la ruta calculada por A*. Los bucles del laberinto ofrecen caminos alternativos.}
+{fig:ejemplo_laberinto}
+
+\figura{etapa0_26_busqueda_final}
+{Búsqueda de A* (izquierda) y Dijkstra (derecha) en el laberinto de $31 \times 31$ del ejemplo. Los nodos naranjas son los expandidos y la línea azul es la ruta final.}
+{fig:busqueda}
+
+En este laberinto, A* expande 120 nodos y Dijkstra 427, y ambos encuentran una ruta de 64 pasos. La animación completa, en formato GIF, está disponible en el repositorio del proyecto. Se observa que A* avanza casi directamente hacia la salida, mientras que Dijkstra se extiende por todo el laberinto antes de alcanzarla.
+
+\subsubsection*{Decisión del planificador}
+Los dos algoritmos son óptimos en todos los casos probados, así que la elección depende del trabajo que realizan. A* expande menos nodos en todos los mapas, tanto en el laberinto del proyecto como en mapas aleatorios y en laberintos más grandes con caminos alternativos. Además, su costo adicional es mínimo, porque la distancia de Manhattan se calcula con una suma.
+
+Por estas razones, el proyecto usará \textbf{A* con el criterio de desempate \texttt{menor\_h}}, tal como indica el plan. Dijkstra se conserva en el repositorio como referencia para verificar que las rutas de A* son óptimas.
+
+Esta decisión depende de las condiciones actuales: una salida conocida y un mapa con costo uniforme. Si en etapas posteriores el sistema tuviera varias salidas o pasos de costo distinto, por ejemplo por terrenos con diferente dificultad, habría que volver a evaluar el planificador.
+
 % ===================== 6. CONCLUSIONES =====================
 \section{Conclusiones}
-La Etapa 0 cumple los resultados esperados. La matriz del laberinto, el planificador, el modelo físico y el controlador superan sus pruebas automáticas, y el recorrido completo de S a G se realiza sin colisiones. El controlador mantiene el éxito del $100\,\%$ hasta 5 mm de ruido de medición en 30 corridas por nivel.
+La Etapa 0 cumple los resultados esperados. La matriz del laberinto, el planificador, el modelo físico y el controlador superan sus pruebas automáticas, y el recorrido completo de S a G se realiza sin colisiones. El controlador mantiene el éxito del 100\,\% hasta 5 mm de ruido de medición en 30 corridas por nivel.
+
+La comparación entre A* y Dijkstra confirma que A* es el planificador adecuado para el proyecto. Ambos encuentran la ruta óptima, pero A* expande entre 1,4 y 4 veces menos nodos según el mapa, y esta ventaja se mantiene en laberintos de mayor tamaño y con caminos alternativos.
 
 Quedan dos observaciones para el análisis posterior. La primera es que la tolerancia de cambio de punto influye directamente en las colisiones y en el tiempo de recorrido. La segunda es que el tiempo medio disminuye con el ruido, lo que indica que el controlador es sensible a la forma en que se decide cambiar de punto.
 
