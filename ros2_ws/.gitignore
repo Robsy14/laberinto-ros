@@ -1,0 +1,4 @@
+# Artefactos de compilacion de ROS 2 / colcon
+build/
+install/
+log/

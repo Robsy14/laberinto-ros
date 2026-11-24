@@ -1,0 +1,291 @@
+\documentclass[11pt,a4paper]{article}
+
+% ===================== PAQUETES =====================
+\usepackage[utf8]{inputenc}
+\usepackage[spanish]{babel}
+\usepackage[T1]{fontenc}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{fancyhdr}
+\usepackage{xcolor}
+\usepackage{listings}
+
+% Las figuras de esta etapa estan en capturas/etapa1/
+\graphicspath{{capturas/etapa1/}{capturas/}}
+
+% ===================== CONFIG HYPERREF =====================
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    urlcolor=blue,
+    pdftitle={Etapa 1: modelado del entorno en Gazebo -- Informe de presentación},
+    pdfauthor={Lina Robsana Jamioy Tisoy, Tomas Rocha Castano}
+}
+
+% ===================== CONFIG LISTINGS =====================
+\definecolor{codebg}{rgb}{0.95,0.95,0.95}
+\definecolor{codegreen}{rgb}{0,0.5,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{codebg},
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{codepurple},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{blue},
+    basicstyle=\ttfamily\footnotesize,
+    breaklines=true,
+    captionpos=b,
+    numbers=left,
+    numbersep=5pt,
+    tabsize=2,
+    frame=single
+}
+\lstset{style=mystyle}
+
+% ===================== ENCABEZADOS =====================
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{Robotica -- Proyecto final}
+\fancyhead[R]{Etapa 1: modelado en Gazebo}
+\fancyfoot[C]{\thepage}
+
+% ===================== COMANDO PARA FIGURAS =====================
+
+ewcommand{\figura}[3]{%
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=0.85\linewidth]{#1}
+        \caption{#2}
+        \label{#3}
+    \end{figure}
+}
+
+\begin{document}
+
+\begin{titlepage}
+    \centering
+    \vspace*{2cm}
+    {\Large \textbf{UNIVERSIDAD NACIONAL DE COLOMBIA}}\\[0.3cm]
+    {\large Sede Manizales}\\[2cm]
+    {\Huge \textbf{Plataforma robotica de laberinto con control autonomo mediante ROS 2 y vision artificial}}\\[0.5cm]
+    {\Large Informe de presentacion: Etapa 1}\\[0.3cm]
+    {\large Modelado del entorno en Gazebo}\\[2cm]
+    \rule{\linewidth}{0.5mm}\\[0.4cm]
+    {\large \textbf{Curso:} Robotica}\\
+    {\large \textbf{Codigo:} MAN-4101136-1-2026-02}\\[0.4cm]
+    \rule{\linewidth}{0.5mm}\\[1.5cm]
+    {\Large \textbf{Integrantes:}}\\[0.4cm]
+    {\large Lina Robsana Jamioy Tisoy}\\
+    {\large Tomas Rocha Castano}\\[2cm]
+    {\large \textbf{Profesor:}}\\
+    {\large Jaime Enrique Arango Castro}\\[2cm]
+    \vfill
+    {\large \today}
+\end{titlepage}
+
+\tableofcontents
+
+ewpage
+
+\section{Introduccion}
+En la Etapa 0 se valido la logica del sistema en una simulacion bidimensional en Python: la representacion del laberinto, el planificador A*, el modelo fisico de la esfera y el controlador PD. Con esa logica comprobada, la Etapa 1 construye el entorno tridimensional en Gazebo, donde el comportamiento fisico ya no se calcula con un modelo simplificado, sino con el motor de fisica del simulador.
+
+El objetivo de esta etapa es levantar el modelo del sistema: la plataforma inclinable de dos grados de libertad, el laberinto de $7 \times 7$ celdas y la esfera, descritos con URDF/Xacro y un mundo en formato SDF. En esta etapa todavia no se integran la camara, la vision artificial ni el control autonomo; eso corresponde a etapas posteriores. Aqui se comprueba que el modelo se carga, que las articulaciones giran dentro de sus limites, y que la esfera responde a la gravedad y colisiona con las paredes.
+
+El trabajo se realizo sobre Ubuntu 24.04 LTS, con ROS 2 Jazzy y Gazebo Harmonic (\texttt{gz sim}, version 8.15.0), tal como indica el plan de proyecto.
+
+\section{Objetivos de la Etapa 1}
+\begin{enumerate}
+    \item Describir la plataforma de dos grados de libertad, el laberinto y la esfera con URDF/Xacro y SDF, respetando la geometria del plan.
+    \item Generar las paredes del laberinto de forma automatica a partir de la misma matriz logica usada en la Etapa 0, para garantizar que ambos modelos coinciden.
+    \item Cargar el modelo en Gazebo Harmonic mediante un archivo de lanzamiento de ROS 2.
+    \item Comprobar que las articulaciones de los ejes X y Y giran dentro del limite de $\pm 8^\circ$ y que ese limite no puede excederse.
+    \item Verificar que la esfera responde a la gravedad, permanece quieta con la plataforma horizontal y colisiona con las paredes sin atravesarlas.
+\end{enumerate}
+
+\section{Entorno y herramientas}
+\begin{table}[H]
+    \centering
+    \begin{tabular}{@{}ll@{}}
+        \toprule
+        \textbf{Componente} & \textbf{Version / detalle} \\
+        \midrule
+        Sistema operativo & Ubuntu 24.04 LTS \\
+        ROS 2 & Jazzy \\
+        Simulador & Gazebo Harmonic (\texttt{gz sim} 8.15.0) \\
+        Puente ROS--Gazebo & \texttt{ros\_gz\_sim}, \texttt{ros\_gz\_bridge} \\
+        Descripcion del modelo & URDF/Xacro y SDF \\
+        Visualizacion & Gazebo GUI y RViz \\
+        Capturas & \texttt{gnome-screenshot} e ImageMagick \\
+        \bottomrule
+    \end{tabular}
+    \caption{Entorno de trabajo de la Etapa 1.}
+    \label{tab:entorno}
+\end{table}
+
+El paquete de ROS 2 creado en esta etapa se llama \texttt{maze\_platform} y vive en el repositorio bajo \texttt{ros2\_ws/src/maze\_platform}. Su estructura es la siguiente:
+\begin{itemize}
+    \item \texttt{urdf/maze\_platform.urdf.xacro}: modelo de la plataforma, las articulaciones, la superficie y las paredes.
+    \item \texttt{worlds/maze.sdf}: mundo de Gazebo con la fisica, la gravedad, la luz, el suelo y la esfera.
+    \item \texttt{launch/display.launch.py}: archivo de lanzamiento que procesa el Xacro, abre Gazebo y coloca el modelo.
+    \item \texttt{rviz/maze.rviz}: configuracion de RViz para ver el modelo y las transformaciones.
+\end{itemize}
+
+\section{Diseno del modelo}
+
+\subsection{Geometria}
+La geometria respeta los valores del plan de proyecto: plataforma de $300 \times 300$ mm, area interior de $280 \times 280$ mm dividida en $7 \times 7$ celdas de $40 \times 40$ mm, paredes de $20$ mm de alto, superficie de $5$ mm de espesor y una esfera de $20$ mm de diametro. Cada pared del laberinto se modela como un bloque del tamano de una celda, lo que hace que el modelo tridimensional coincida exactamente con las celdas marcadas como obstaculo en la matriz logica.
+
+\subsection{Cadena cinematica}
+La plataforma tiene dos grados de libertad organizados en cadena: una base fija, una articulacion de rotacion en el eje X, un marco intermedio, una articulacion de rotacion en el eje Y y la plataforma superior que sostiene el laberinto. Los dos ejes son perpendiculares. Cada articulacion es de tipo \texttt{revolute} con un limite de $\pm 8^\circ$ ($\pm 0{,}139626$ rad):
+\begin{center}
+Base fija $\rightarrow$ \texttt{joint\_x} $\rightarrow$ marco intermedio $\rightarrow$ \texttt{joint\_y} $\rightarrow$ plataforma + laberinto.
+\end{center}
+La esfera no es parte de esta cadena: se define como un cuerpo libre en el mundo, para que pueda rodar sobre la superficie bajo el efecto de la gravedad y de la inclinacion de la plataforma.
+
+\subsection{Correspondencia con la Etapa 0}
+Para garantizar que el laberinto de Gazebo es el mismo que el de la Etapa 0, las paredes se generan con una macro de Xacro a partir de las celdas marcadas como obstaculo en la matriz \texttt{MAZE} de \texttt{src/maze.py}. La convencion de coordenadas coloca el origen en el centro de la plataforma:
+\begin{equation}
+    x = (c - 3)\cdot 0{,}040 \ \text{m}, \qquad y = (3 - r)\cdot 0{,}040 \ \text{m},
+\end{equation}
+donde $(r, c)$ son la fila y la columna de la celda. Con esta convencion, el inicio $S=(0,0)$ queda en $(x,y) = (-0{,}120,\ 0{,}120)$ y la salida $G=(6,6)$ en $(0{,}120,\ -0{,}120)$. Se verifico que las 16 celdas con valor 1 de la matriz producen exactamente 16 paredes en el modelo, sin celdas de mas ni de menos.
+
+El fragmento siguiente muestra la macro que coloca cada pared y las articulaciones con su limite:
+\begin{lstlisting}[language=XML, caption={Macro de pared y articulacion con limite de 8 grados (extracto del Xacro).}]
+<xacro:macro name="wall" params="r c">
+  <visual name="pared_${r}_${c}">
+    <origin xyz="${(c-3)*cell} ${(3-r)*cell} ${wall_h/2}"/>
+    <geometry><box size="${wall_block} ${wall_block} ${wall_h}"/></geometry>
+  </visual>
+  <collision name="pared_${r}_${c}_col">
+    <origin xyz="${(c-3)*cell} ${(3-r)*cell} ${wall_h/2}"/>
+    <geometry><box size="${wall_block} ${wall_block} ${wall_h}"/></geometry>
+  </collision>
+</xacro:macro>
+
+<joint name="joint_x" type="revolute">
+  <parent link="base_link"/>
+  <child  link="frame_link"/>
+  <axis xyz="1 0 0"/>
+  <limit lower="-0.139626" upper="0.139626" effort="20.0" velocity="3.0"/>
+</joint>
+\end{lstlisting}
+
+\subsection{Control de las articulaciones y fisica}
+Para esta etapa, las articulaciones se mueven con el sistema \texttt{JointPositionController} de Gazebo, que recibe el angulo deseado por un topico. No se usa \texttt{ros2\_control}, que se reserva para la etapa de integracion. El mundo se configura con un paso de simulacion de 1 ms y gravedad de $-9{,}81$ m/s$^2$, de acuerdo con el plan. A la esfera se le asigno una masa de $33{,}5$ g y una inercia de esfera maciza $I = \tfrac{2}{5} m r^2$, como punto de partida para acercar su comportamiento al de la Etapa 0.
+
+\section{Desarrollo y resultados}
+
+\subsection{Preparacion y compilacion}
+El paquete se compila con \texttt{colcon} dentro del workspace de ROS 2:
+\begin{lstlisting}[language=bash, caption={Compilacion del paquete.}]
+cd ros2_ws
+source /opt/ros/jazzy/setup.bash
+colcon build --packages-select maze_platform
+source install/setup.bash
+\end{lstlisting}
+
+Antes de abrir Gazebo se comprobo que el Xacro se procesa sin errores y que la cadena de eslabones es valida. El comando \texttt{xacro} genero el URDF, en el que se contaron 32 entradas de pared (16 paredes, cada una con su geometria visual y de colision), y \texttt{check\_urdf} confirmo la jerarquia \texttt{base\_link} $\rightarrow$ \texttt{frame\_link} $\rightarrow$ \texttt{platform\_link}.
+
+\subsection{Carga del modelo en Gazebo}
+El modelo se carga con el archivo de lanzamiento:
+\begin{lstlisting}[language=bash, caption={Lanzamiento de Gazebo con el modelo.}]
+ros2 launch maze_platform display.launch.py
+\end{lstlisting}
+
+La figura~\ref{fig:modelo_cargado} muestra el entorno recien cargado. Se ven la superficie del tablero, las 16 paredes del laberinto y la esfera en la celda de inicio. En el arbol de entidades aparecen la plataforma (\texttt{maze\_platform}), la esfera (\texttt{ball}), la luz (\texttt{sol}) y el suelo (\texttt{ground\_plane}). Con esto se cumple la primera prueba del plan: el modelo se carga correctamente.
+
+\figura{etapa1_01_modelo_cargado}
+{Modelo cargado en Gazebo Harmonic: plataforma, laberinto de 7x7 y esfera en la celda de inicio. El arbol de entidades confirma los cuatro modelos del mundo.}
+{fig:modelo_cargado}
+
+\subsection{Rotacion de las articulaciones}
+Las articulaciones se comandan publicando el angulo deseado en los topicos de Gazebo:
+\begin{lstlisting}[language=bash, caption={Comando de inclinacion de las articulaciones (8 grados = 0.1396 rad).}]
+gz topic -t /cmd_joint_x -m gz.msgs.Double -p 'data: 0.139626'
+gz topic -t /cmd_joint_y -m gz.msgs.Double -p 'data: -0.139626'
+\end{lstlisting}
+
+La figura~\ref{fig:inclinada} muestra la plataforma inclinada en los dos ejes. Al inclinarse, la esfera deja de estar en reposo y se desplaza por la superficie, lo que muestra que la inclinacion de la plataforma afecta a la esfera a traves del motor de fisica.
+
+\figura{etapa1_02_articulaciones_inclinadas}
+{Plataforma inclinada en los ejes X e Y. La esfera se desplaza sobre la superficie por efecto de la inclinacion.}
+{fig:inclinada}
+
+Para comprobar el valor exacto de la rotacion se leyo el estado de las articulaciones publicado por Gazebo en el topico \texttt{/joint\_states}, accesible desde ROS 2 gracias al puente \texttt{ros\_gz\_bridge}:
+\begin{lstlisting}[language=bash, caption={Lectura del estado de las articulaciones.}]
+ros2 topic echo /joint_states --once
+\end{lstlisting}
+
+Tras comandar \texttt{joint\_x} a $0{,}139626$ rad, el estado medido fue:
+\begin{table}[H]
+    \centering
+    \begin{tabular}{@{}lrr@{}}
+        \toprule
+        \textbf{Articulacion} & \textbf{Comando [rad]} & \textbf{Posicion medida [rad]} \\
+        \midrule
+        \texttt{joint\_x} & $0{,}139626$ & $0{,}139626$ \\
+        \texttt{joint\_y} & $0{,}000000$ & $0{,}001248$ \\
+        \bottomrule
+    \end{tabular}
+    \caption{Estado de las articulaciones tras comandar \texttt{joint\_x} a 8 grados. Las velocidades medidas fueron del orden de $10^{-5}$ rad/s, es decir, el sistema quedo en reposo.}
+    \label{tab:joint_8}
+\end{table}
+
+La figura~\ref{fig:joint_states} muestra la salida de \texttt{/joint\_states}. La posicion de \texttt{joint\_x} coincide con el comando de $8^\circ$, mientras que \texttt{joint\_y} queda practicamente en cero. Esto confirma que las dos articulaciones se mueven de forma independiente.
+
+\figura{etapa1_03_joint_states_8grados}
+{Lectura de \texttt{/joint\_states} tras comandar \texttt{joint\_x} a 0.1396 rad. La posicion medida coincide con el angulo comandado de 8 grados.}
+{fig:joint_states}
+
+\subsubsection*{Prueba del limite mecanico}
+Para verificar que el limite de $\pm 8^\circ$ no puede excederse, se comando la articulacion a $15^\circ$ ($0{,}2618$ rad), muy por encima del limite. La posicion medida se mantuvo en $0{,}139626$ rad, es decir, $8^\circ$ exactos. El limite definido en el URDF satura la articulacion y le impide girar mas. Con esto se cumple la segunda prueba del plan: las articulaciones rotan dentro de $\pm 8^\circ$ y el limite se respeta.
+
+\subsection{Gravedad y colision de la esfera}
+La respuesta de la esfera a la fisica se comprobo en dos situaciones. Con la plataforma horizontal, la esfera permanece quieta en su celda, lo que indica que la friccion de la superficie es suficiente para sostenerla y que no hay deriva numerica. Al inclinar la plataforma, la esfera rueda por los corredores siguiendo la pendiente y choca con las paredes sin atravesarlas.
+
+Para documentar el movimiento se grabo una secuencia de imagenes mientras la plataforma se inclinaba en distintas direcciones. Las figuras~\ref{fig:rueda_inicio} y~\ref{fig:rueda_fin} muestran el primer y el ultimo cuadro de esa secuencia. La animacion completa, en formato GIF, esta disponible en el repositorio del proyecto en \texttt{capturas/etapa1/etapa1\_04\_esfera\_rueda.gif}.
+
+\figura{etapa1_04_esfera_rueda_inicio}
+{Cuadro inicial de la secuencia: la esfera parte de la zona de inicio del laberinto.}
+{fig:rueda_inicio}
+
+\figura{etapa1_04_esfera_rueda_fin}
+{Cuadro final de la secuencia: tras inclinar la plataforma en varias direcciones, la esfera se ha desplazado por los corredores chocando con las paredes sin atravesarlas.}
+{fig:rueda_fin}
+
+Con estas observaciones se cumple la tercera prueba del plan: existe colision entre la esfera y las paredes, y la esfera responde a la gravedad.
+
+\section{Resumen de las pruebas de la etapa}
+La tabla~\ref{tab:pruebas} resume las pruebas que el plan define para la Etapa 1 y el resultado obtenido.
+\begin{table}[H]
+    \centering
+    \begin{tabular}{@{}p{6.5cm}p{2cm}p{5.5cm}@{}}
+        \toprule
+        \textbf{Prueba del plan} & \textbf{Resultado} & \textbf{Evidencia} \\
+        \midrule
+        El modelo se carga correctamente & Cumple & Figura~\ref{fig:modelo_cargado}; Gazebo sin errores. \\
+        Las articulaciones rotan en X e Y dentro de $\pm 8^\circ$ & Cumple & Tabla~\ref{tab:joint_8}, figuras~\ref{fig:inclinada} y~\ref{fig:joint_states}; posicion medida de $0{,}1396$ rad. \\
+        El limite de $\pm 8^\circ$ no puede excederse & Cumple & Al comandar $15^\circ$, la posicion satura en $8^\circ$. \\
+        Colision esfera--paredes y respuesta a la gravedad & Cumple & Figuras~\ref{fig:rueda_inicio} y~\ref{fig:rueda_fin}; GIF del recorrido. \\
+        Esfera quieta con plataforma horizontal & Cumple & Observacion en simulacion; sin deriva. \\
+        Ajuste de masa, friccion y paso de 1 ms & Parcial & Fisica a 1 ms y esfera estable; el ajuste fino se hara en la integracion. \\
+        \bottomrule
+    \end{tabular}
+    \caption{Pruebas de la Etapa 1 y resultado obtenido.}
+    \label{tab:pruebas}
+\end{table}
+
+\section{Conclusiones}
+La Etapa 1 cumple su objetivo: el modelo de la plataforma, el laberinto y la esfera esta construido en Gazebo Harmonic y se carga sin errores desde un archivo de lanzamiento de ROS 2. Las articulaciones de los ejes X e Y giran de forma independiente dentro del limite de $\pm 8^\circ$, y ese limite se respeta aunque se comande un angulo mayor. La esfera permanece quieta con la plataforma horizontal, rueda al inclinarla y colisiona con las paredes sin atravesarlas.
+
+La decision de generar las paredes a partir de la misma matriz de la Etapa 0 asegura que el laberinto del simulador coincide con el que valido el planificador, lo que evita diferencias entre ambas etapas.
+
+Queda pendiente para las etapas siguientes el ajuste fino de la masa, la friccion y el paso de simulacion para que los tiempos de recorrido coincidan con los de la Etapa 0, asi como la incorporacion de la camara virtual, la deteccion de la esfera con OpenCV y el control autonomo. Con el entorno ya modelado, la siguiente etapa puede concentrarse en la percepcion visual sobre este mismo modelo.
+
+\end{document}
