@@ -1,0 +1,188 @@
+<?xml version="1.0"?>
+<robot name="maze_platform" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- Parametros geometricos (metros / radianes) -->
+  <xacro:property name="cell"        value="0.040"/>
+  <xacro:property name="n"           value="7"/>
+  <xacro:property name="interior"    value="${cell*n}"/>
+  <xacro:property name="outer"       value="0.300"/>
+  <xacro:property name="surf_th"     value="0.005"/>
+  <xacro:property name="wall_h"      value="0.020"/>
+  <xacro:property name="wall_block"  value="0.040"/>
+  <xacro:property name="ball_r"      value="0.010"/>
+  <xacro:property name="limit"       value="0.139626"/>
+  <xacro:property name="base_mass"      value="2.0"/>
+  <xacro:property name="frame_mass"     value="0.5"/>
+  <xacro:property name="platform_mass"  value="1.0"/>
+  <xacro:property name="mount_h"     value="0.060"/>
+
+  <xacro:macro name="box_inertia" params="m dx dy dz">
+    <inertial>
+      <mass value="${m}"/>
+      <inertia
+        ixx="${m*(dy*dy+dz*dz)/12.0}" ixy="0.0" ixz="0.0"
+        iyy="${m*(dx*dx+dz*dz)/12.0}" iyz="0.0"
+        izz="${m*(dx*dx+dy*dy)/12.0}"/>
+    </inertial>
+  </xacro:macro>
+
+  <link name="base_link">
+    <visual>
+      <origin xyz="0 0 0.005"/>
+      <geometry><box size="${outer} ${outer} 0.010"/></geometry>
+      <material name="gris"><color rgba="0.3 0.3 0.3 1"/></material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0.005"/>
+      <geometry><box size="${outer} ${outer} 0.010"/></geometry>
+    </collision>
+    <xacro:box_inertia m="${base_mass}" dx="${outer}" dy="${outer}" dz="0.010"/>
+  </link>
+
+  <joint name="joint_x" type="revolute">
+    <parent link="base_link"/>
+    <child  link="frame_link"/>
+    <origin xyz="0 0 ${mount_h}"/>
+    <axis xyz="1 0 0"/>
+    <limit lower="${-limit}" upper="${limit}" effort="20.0" velocity="3.0"/>
+    <dynamics damping="0.05" friction="0.0"/>
+  </joint>
+
+  <link name="frame_link">
+    <visual name="frame_barra_x">
+      <origin xyz="0 0 -0.015"/>
+      <geometry><box size="${interior+0.02} 0.012 0.008"/></geometry>
+      <material name="azul"><color rgba="0.1 0.3 0.8 1"/></material>
+    </visual>
+    <visual name="frame_barra_y">
+      <origin xyz="0 0 -0.015"/>
+      <geometry><box size="0.012 ${interior+0.02} 0.008"/></geometry>
+      <material name="azul"><color rgba="0.1 0.3 0.8 1"/></material>
+    </visual>
+    <xacro:box_inertia m="${frame_mass}" dx="${interior}" dy="${interior}" dz="0.008"/>
+  </link>
+
+  <joint name="joint_y" type="revolute">
+    <parent link="frame_link"/>
+    <child  link="platform_link"/>
+    <origin xyz="0 0 0"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="${-limit}" upper="${limit}" effort="20.0" velocity="3.0"/>
+    <dynamics damping="0.05" friction="0.0"/>
+  </joint>
+
+  <link name="platform_link">
+    <visual name="superficie">
+      <origin xyz="0 0 ${-surf_th/2}"/>
+      <geometry><box size="${outer} ${outer} ${surf_th}"/></geometry>
+      <material name="madera"><color rgba="0.8 0.7 0.5 1"/></material>
+    </visual>
+    <collision name="superficie_col">
+      <origin xyz="0 0 ${-surf_th/2}"/>
+      <geometry><box size="${outer} ${outer} ${surf_th}"/></geometry>
+    </collision>
+    <xacro:box_inertia m="${platform_mass}" dx="${outer}" dy="${outer}" dz="${surf_th}"/>
+
+    <xacro:property name="edge_off" value="${interior/2 + 0.0025}"/>
+    <visual name="borde_yp">
+      <origin xyz="0 ${edge_off} ${wall_h/2}"/>
+      <geometry><box size="${interior+0.01} 0.005 ${wall_h}"/></geometry>
+      <material name="pared"><color rgba="0.6 0.2 0.2 1"/></material>
+    </visual>
+    <collision name="borde_yp_col">
+      <origin xyz="0 ${edge_off} ${wall_h/2}"/>
+      <geometry><box size="${interior+0.01} 0.005 ${wall_h}"/></geometry>
+    </collision>
+    <visual name="borde_yn">
+      <origin xyz="0 ${-edge_off} ${wall_h/2}"/>
+      <geometry><box size="${interior+0.01} 0.005 ${wall_h}"/></geometry>
+      <material name="pared"><color rgba="0.6 0.2 0.2 1"/></material>
+    </visual>
+    <collision name="borde_yn_col">
+      <origin xyz="0 ${-edge_off} ${wall_h/2}"/>
+      <geometry><box size="${interior+0.01} 0.005 ${wall_h}"/></geometry>
+    </collision>
+    <visual name="borde_xp">
+      <origin xyz="${edge_off} 0 ${wall_h/2}"/>
+      <geometry><box size="0.005 ${interior+0.01} ${wall_h}"/></geometry>
+      <material name="pared"><color rgba="0.6 0.2 0.2 1"/></material>
+    </visual>
+    <collision name="borde_xp_col">
+      <origin xyz="${edge_off} 0 ${wall_h/2}"/>
+      <geometry><box size="0.005 ${interior+0.01} ${wall_h}"/></geometry>
+    </collision>
+    <visual name="borde_xn">
+      <origin xyz="${-edge_off} 0 ${wall_h/2}"/>
+      <geometry><box size="0.005 ${interior+0.01} ${wall_h}"/></geometry>
+      <material name="pared"><color rgba="0.6 0.2 0.2 1"/></material>
+    </visual>
+    <collision name="borde_xn_col">
+      <origin xyz="${-edge_off} 0 ${wall_h/2}"/>
+      <geometry><box size="0.005 ${interior+0.01} ${wall_h}"/></geometry>
+    </collision>
+
+    <xacro:macro name="wall" params="r c">
+      <visual name="pared_${r}_${c}">
+        <origin xyz="${(c-3)*cell} ${(3-r)*cell} ${wall_h/2}"/>
+        <geometry><box size="${wall_block} ${wall_block} ${wall_h}"/></geometry>
+        <material name="pared"><color rgba="0.6 0.2 0.2 1"/></material>
+      </visual>
+      <collision name="pared_${r}_${c}_col">
+        <origin xyz="${(c-3)*cell} ${(3-r)*cell} ${wall_h/2}"/>
+        <geometry><box size="${wall_block} ${wall_block} ${wall_h}"/></geometry>
+      </collision>
+    </xacro:macro>
+
+    <xacro:wall r="0" c="3"/>
+    <xacro:wall r="1" c="0"/>
+    <xacro:wall r="1" c="1"/>
+    <xacro:wall r="1" c="3"/>
+    <xacro:wall r="1" c="5"/>
+    <xacro:wall r="2" c="5"/>
+    <xacro:wall r="3" c="1"/>
+    <xacro:wall r="3" c="2"/>
+    <xacro:wall r="3" c="3"/>
+    <xacro:wall r="4" c="3"/>
+    <xacro:wall r="4" c="4"/>
+    <xacro:wall r="4" c="5"/>
+    <xacro:wall r="5" c="0"/>
+    <xacro:wall r="5" c="1"/>
+    <xacro:wall r="6" c="3"/>
+    <xacro:wall r="6" c="4"/>
+  </link>
+
+  <gazebo reference="platform_link">
+    <mu1>0.3</mu1>
+    <mu2>0.3</mu2>
+    <material>Gazebo/Wood</material>
+  </gazebo>
+  <gazebo reference="base_link">
+    <material>Gazebo/Grey</material>
+  </gazebo>
+
+  <gazebo>
+    <plugin filename="gz-sim-joint-position-controller-system"
+            name="gz::sim::systems::JointPositionController">
+      <joint_name>joint_x</joint_name>
+      <topic>/cmd_joint_x</topic>
+      <p_gain>8.0</p_gain>
+      <i_gain>0.2</i_gain>
+      <d_gain>0.5</d_gain>
+      <cmd_max>20.0</cmd_max>
+      <cmd_min>-20.0</cmd_min>
+    </plugin>
+    <plugin filename="gz-sim-joint-position-controller-system"
+            name="gz::sim::systems::JointPositionController">
+      <joint_name>joint_y</joint_name>
+      <topic>/cmd_joint_y</topic>
+      <p_gain>8.0</p_gain>
+      <i_gain>0.2</i_gain>
+      <d_gain>0.5</d_gain>
+      <cmd_max>20.0</cmd_max>
+      <cmd_min>-20.0</cmd_min>
+    </plugin>
+    <plugin filename="gz-sim-joint-state-publisher-system"
+            name="gz::sim::systems::JointStatePublisher"/>
+  </gazebo>
+
+</robot>
